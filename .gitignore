@@ -1,0 +1,46 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/build/
+/dist/
+# Compiled binaries at repo root (leading slash keeps cmd/server/ tracked)
+/server
+/url-shortener
+
+# Test & coverage output
+*.test
+*.out
+coverage.*
+
+# Go workspace / tooling
+go.work
+go.work.sum
+vendor/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
