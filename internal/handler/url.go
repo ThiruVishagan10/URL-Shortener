@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+
+	"github.com/thiruvishagan10/URL-Shortener/internal/generator"
 )
 
 type CreateURLRequest struct {
@@ -31,7 +33,6 @@ func validateURL(rawURL string) error {
 
 func CreateURL (w http.ResponseWriter, r *http.Request){
 	var request CreateURLRequest
-	shortID := "abc123" 
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -49,6 +50,11 @@ func CreateURL (w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	shortID, err := generator.Generate(6) 
+	if err != nil{
+		http.Error(w, "Failed to generate short URL", http.StatusBadRequest)
+	}
+	
 	response := CreateURLResponse {
 		ID : shortID,
 		ShortURL: "http://localhost:8080/" + shortID,// TODO: Replace localhost with configurable base URL.
