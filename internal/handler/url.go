@@ -6,15 +6,25 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/thiruvishagan10/URL-Shortener/internal/generator"
+	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
+
+type URLHandler struct {
+	service service.URLService
+}
+
+func NewURLHandler(service service.URLService) *URLHandler {
+	return &URLHandler{
+		service: service,
+	}
+}
 
 type CreateURLRequest struct {
 	URL string `json:"url"`
 }
 
 type CreateURLResponse struct {
-	ID string `json:"id"`
+	ID       string `json:"id"`
 	ShortURL string `json:"short_url"`
 }
 
@@ -31,16 +41,18 @@ func validateURL(rawURL string) error {
 	return nil
 }
 
-func CreateURL (w http.ResponseWriter, r *http.Request){
+func (h *URLHandler) Create(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	var request CreateURLRequest
 
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if request.URL == ""{
+	if request.URL == "" {
 		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
@@ -50,21 +62,26 @@ func CreateURL (w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	shortID, err := generator.Generate(6) 
-	if err != nil{
-		http.Error(w, "Failed to generate short URL", http.StatusBadRequest)
+	url, err := h.service.Create(
+		r.Context(),
+		request.URL,
+	)
+
+	if err != nil {
+		http.Error(w, "Failed to create short URL", http.StatusInternalServerError)
+		return
 	}
-	
-	response := CreateURLResponse {
-		ID : shortID,
-		ShortURL: "http://localhost:8080/" + shortID,// TODO: Replace localhost with configurable base URL.
+
+	response := CreateURLResponse{
+		ID:       url.ShortID,
+		ShortURL: "http://localhost:8080/" + url.ShortID, // TODO: Replace localhost with configurable base URL.
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	err = json.NewEncoder(w).Encode(response)
-	if err != nil{
+	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
