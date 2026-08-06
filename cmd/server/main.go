@@ -9,6 +9,8 @@ import (
 	"github.com/thiruvishagan10/URL-Shortener/internal/config"
 	"github.com/thiruvishagan10/URL-Shortener/internal/database"
 	"github.com/thiruvishagan10/URL-Shortener/internal/handler"
+	"github.com/thiruvishagan10/URL-Shortener/internal/repository"
+	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
 
 func main() {
@@ -27,10 +29,16 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	repo := repository.NewURLRepository(dbPool)
+
+	svc := service.NewURLService(repo)
+
+	urlHandler := handler.NewURLHandler(svc)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handler.Health)
-	mux.HandleFunc("POST /api/urls", handler.CreateURL)
+	mux.HandleFunc("POST /api/urls", urlHandler.Create)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

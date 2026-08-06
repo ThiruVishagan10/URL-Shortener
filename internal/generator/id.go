@@ -6,6 +6,10 @@ import (
 	"math/big"
 )
 
+const (
+	DefaultShortIDLength = 6
+)
+
 const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func Generate(length int) (string, error) {
