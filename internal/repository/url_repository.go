@@ -18,6 +18,11 @@ type URLRepository interface {
 		ctx context.Context,
 		shortID string,
 	) (*model.URL, error)
+
+	FindByOriginalURL(
+		ctx context.Context,
+		originalURL string,
+	) (*model.URL, error)
 }
 
 type PostgresURLRepository struct {
@@ -78,6 +83,43 @@ func (r *PostgresURLRepository) FindByShortID(
 		ctx,
 		query,
 		shortID,
+	).Scan(
+		&url.ID,
+		&url.ShortID,
+		&url.OriginalURL,
+		&url.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrs.ErrURLNotFound
+		}
+		return nil, err
+	}
+	return url, nil
+}
+
+func (r *PostgresURLRepository) FindByOriginalURL(
+	ctx context.Context,
+	original_url string,
+) (*model.URL, error) {
+
+	query := `
+		SELECT 
+			id,
+			short_id,
+			original_url,
+			created_at
+		FROM urls
+		WHERE original_url = $1
+	`
+
+	url := &model.URL{}
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		original_url,
 	).Scan(
 		&url.ID,
 		&url.ShortID,
