@@ -10,6 +10,11 @@ import (
 
 type URLService interface {
 	Create(ctx context.Context, originalURL string) (*model.URL, error)
+
+	GetByShortID(
+		ctx context.Context,
+		shortID string,
+	) (*model.URL, error)
 }
 
 type urlService struct {
@@ -42,4 +47,11 @@ func (s *urlService) Create(
 	}
 
 	return urlModel, nil
+}
+
+func (s *urlService) GetByShortID(
+	ctx context.Context,
+	shortID string,
+) (*model.URL, error) {
+	return s.repo.FindByShortID(ctx, shortID)
 }
