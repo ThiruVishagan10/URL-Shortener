@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 
+	apperrors "github.com/thiruvishagan10/URL-Shortener/internal/apperrors"
 	"github.com/thiruvishagan10/URL-Shortener/internal/generator"
 	"github.com/thiruvishagan10/URL-Shortener/internal/model"
 	"github.com/thiruvishagan10/URL-Shortener/internal/repository"
@@ -31,6 +33,19 @@ func (s *urlService) Create(
 	ctx context.Context,
 	originalURL string,
 ) (*model.URL, error) {
+
+	existingURL, err := s.repo.FindByOriginalURL(
+		ctx,
+		originalURL,
+	)
+
+	if err == nil {
+		return existingURL, nil
+	}
+
+	if !errors.Is(err, apperrors.ErrURLNotFound) {
+		return nil, err
+	}
 
 	shortID, err := generator.Generate(generator.DefaultShortIDLength)
 	if err != nil {
