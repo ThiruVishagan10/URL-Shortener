@@ -52,16 +52,29 @@ func (s *urlService) Create(
 		return nil, err
 	}
 
-	urlModel := &model.URL{
+	url := &model.URL{
 		ShortID:     shortID,
 		OriginalURL: originalURL,
 	}
 
-	if err := s.repo.Create(ctx, urlModel); err != nil {
+	if err := s.repo.Create(ctx, url); err != nil {
+
+		if errors.Is(err, apperrors.ErrDuplicateURL) {
+			existingURL, findErr := s.repo.FindByOriginalURL(
+				ctx,
+				originalURL,
+			)
+
+			if findErr != nil {
+				return nil, findErr
+			}
+
+			return existingURL, nil
+		}
 		return nil, err
 	}
 
-	return urlModel, nil
+	return url, nil
 }
 
 func (s *urlService) GetByShortID(

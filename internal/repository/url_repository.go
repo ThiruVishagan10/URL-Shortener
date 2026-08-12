@@ -110,7 +110,7 @@ func (r *PostgresURLRepository) FindByShortID(
 
 func (r *PostgresURLRepository) FindByOriginalURL(
 	ctx context.Context,
-	original_url string,
+	originalURL string,
 ) (*model.URL, error) {
 
 	query := `
@@ -128,7 +128,7 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		original_url,
+		originalURL,
 	).Scan(
 		&url.ID,
 		&url.ShortID,
