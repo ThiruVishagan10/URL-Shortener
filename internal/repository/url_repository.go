@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	apperrs "github.com/thiruvishagan10/URL-Shortener/internal/apperrors"
@@ -56,6 +57,14 @@ func (r *PostgresURLRepository) Create(
 	)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" &&
+				pgErr.ConstraintName == "unique_original_url" {
+				return apperrs.ErrDuplicateURL
+			}
+		}
 		return err
 	}
 
@@ -101,7 +110,7 @@ func (r *PostgresURLRepository) FindByShortID(
 
 func (r *PostgresURLRepository) FindByOriginalURL(
 	ctx context.Context,
-	original_url string,
+	originalURL string,
 ) (*model.URL, error) {
 
 	query := `
@@ -119,7 +128,7 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 	err := r.db.QueryRow(
 		ctx,
 		query,
-		original_url,
+		originalURL,
 	).Scan(
 		&url.ID,
 		&url.ShortID,
