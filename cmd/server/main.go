@@ -6,6 +6,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/thiruvishagan10/URL-Shortener/internal/auth"
 	"github.com/thiruvishagan10/URL-Shortener/internal/config"
 	"github.com/thiruvishagan10/URL-Shortener/internal/database"
 	"github.com/thiruvishagan10/URL-Shortener/internal/handler"
@@ -37,11 +38,19 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	googleAuth := auth.NewGoogleOAuthProvider(cfg)
+
+	authHandler := handler.NewAuthHandler(googleAuth)
+
 	//Application routes
-	mux.HandleFunc("GET /health", handler.Health) //Health Check
-	mux.HandleFunc("POST /api/urls", urlHandler.Create) //Create short ID 
+	mux.HandleFunc("GET /health", handler.Health)                      //Health Check
+	mux.HandleFunc("POST /api/urls", urlHandler.Create)                //Create short ID
 	mux.HandleFunc("GET /api/urls/{shortID}", urlHandler.GetByShortID) //Fetch particular ID
-	mux.HandleFunc("GET /{shortID}", urlHandler.Redirect) //Redirect to original url through shortid
+	mux.HandleFunc("GET /{shortID}", urlHandler.Redirect)
+	mux.HandleFunc(
+		"GET /auth/google",
+		authHandler.GoogleLogin,
+	) //Redirect to original url through shortid
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
