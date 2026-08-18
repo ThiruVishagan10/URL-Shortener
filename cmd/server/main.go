@@ -47,10 +47,18 @@ func main() {
 	mux.HandleFunc("POST /api/urls", urlHandler.Create)                //Create short ID
 	mux.HandleFunc("GET /api/urls/{shortID}", urlHandler.GetByShortID) //Fetch particular ID
 	mux.HandleFunc("GET /{shortID}", urlHandler.Redirect)
+
+	//Google Auth
 	mux.HandleFunc(
 		"GET /auth/google",
 		authHandler.GoogleLogin,
 	) //Redirect to original url through shortid
+
+	//Redirect
+	mux.HandleFunc(
+		"GET /auth/google/callback",
+		authHandler.GoogleCallback,
+	)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

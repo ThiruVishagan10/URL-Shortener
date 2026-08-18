@@ -1,12 +1,14 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/idtoken"
 
 	"github.com/thiruvishagan10/URL-Shortener/internal/config"
 )
@@ -19,6 +21,13 @@ type AuthorizationRequest struct {
 	URL          string
 	State        string
 	CodeVerifier string
+}
+
+type GoogleIdentity struct {
+	Subject   string
+	Email     string
+	Name      string
+	AvatarURL *string
 }
 
 func NewGoogleOAuthProvider(cfg *config.Config) *GoogleOAuthProvider {
@@ -65,4 +74,58 @@ func generateState() (string, error) {
 	}
 
 	return base64.RawStdEncoding.EncodeToString(buffer), nil
+}
+
+func (p *GoogleOAuthProvider) Authenticate(
+	ctx context.Context,
+	code string,
+	codeVerifier string,
+) (*GoogleIdentity, error) {
+	token, err := p.config.Exchange(
+		ctx,
+		code,
+		oauth2.VerifierOption(codeVerifier),
+	)
+	if err != nil {
+		return nil, errors.New("failed to exchange Google authorizaton code")
+	}
+
+	if !token.Valid() {
+		return nil, errors.New("invalid Google token")
+	}
+
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok || rawIDToken == "" {
+		return nil, errors.New("Google ID token missing")
+	}
+
+	payload, err := idtoken.Validate(
+		ctx,
+		rawIDToken,
+		p.config.ClientID,
+	)
+	if err != nil {
+		return nil, errors.New("invalid Google ID token")
+	}
+
+	if payload.Subject == "" {
+		return nil, errors.New("Google subject missing")
+	}
+
+	email, _ := payload.Claims["email"].(string)
+	name, _ := payload.Claims["name"].(string)
+	picture, _ := payload.Claims["picture"].(string)
+
+	var avatarURL *string
+
+	if picture != "" {
+		avatarURL = &picture
+	}
+
+	return &GoogleIdentity{
+		Subject:   payload.Subject,
+		Email:     email,
+		Name:      name,
+		AvatarURL: avatarURL,
+	}, nil
 }

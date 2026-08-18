@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/thiruvishagan10/URL-Shortener/internal/auth"
@@ -65,4 +66,69 @@ func (h *AuthHandler) GoogleLogin(
 		authRequest.URL,
 		http.StatusFound,
 	)
+}
+
+func (h *AuthHandler) GoogleCallback(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	query := r.URL.Query()
+
+	code := query.Get("code")
+	state := query.Get("state")
+
+	if code == "" {
+		http.Error(w, "Authorization code missing", http.StatusBadRequest)
+		return
+	}
+
+	if state == "" {
+		http.Error(w, "OAuth state missing", http.StatusBadRequest)
+		return
+	}
+
+	stateCookie, err := r.Cookie(oauthStateCookie)
+	if err != nil {
+		http.Error(w, "OAuth Cookie missing", http.StatusBadRequest)
+		return
+	}
+
+	if state != stateCookie.Value {
+		http.Error(w, "Invalid OAuth state", http.StatusBadRequest)
+		return
+	}
+
+	verifierCookie, err := r.Cookie(oauthVerifierCookie)
+	if err != nil {
+		http.Error(w, "OAuth verifier missing", http.StatusBadRequest)
+		return
+	}
+
+	identity, err := h.googleAuth.Authenticate(
+		r.Context(),
+		code,
+		verifierCookie.Value,
+	)
+	if err != nil {
+		http.Error(w, "Google authentication failed", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	response := struct {
+		Subject   string  `json:"subject"`
+		Email     string  `json:"email"`
+		Name      string  `json:"name"`
+		AvatarURL *string `json:"avatar_url,omitempty"`
+	}{
+		Subject:   identity.Subject,
+		Email:     identity.Email,
+		Name:      identity.Name,
+		AvatarURL: identity.AvatarURL,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
