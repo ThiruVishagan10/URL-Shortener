@@ -100,7 +100,7 @@ Each layer has a single responsibility.
 ### Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/URL-Shortener.git
+git clone https://github.com/thiruvishagan10/URL-Shortener.git
 
 cd URL-Shortener
 ```

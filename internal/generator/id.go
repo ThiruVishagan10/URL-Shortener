@@ -29,5 +29,5 @@ func Generate(length int) (string, error) {
 
 	}
 
-		return string(id), nil
+	return string(id), nil
 }
