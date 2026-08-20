@@ -103,7 +103,7 @@ func (h *AuthHandler) GoogleCallback(
 	}
 
 	stateCookie, err := r.Cookie(oauthStateCookie)
-	log.Printf("reason for missing OAuth state cookie : %v", err)
+	// log.Printf("reason for missing OAuth state cookie : %v", err)
 
 	if err != nil {
 		http.Error(

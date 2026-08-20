@@ -11,7 +11,11 @@ import (
 )
 
 type URLService interface {
-	Create(ctx context.Context, originalURL string) (*model.URL, error)
+	Create(
+		ctx context.Context,
+		userID string,
+		originalURL string,
+	) (*model.URL, error)
 
 	GetByShortID(
 		ctx context.Context,
@@ -31,6 +35,7 @@ func NewURLService(repo repository.URLRepository) URLService {
 
 func (s *urlService) Create(
 	ctx context.Context,
+	userID string,
 	originalURL string,
 ) (*model.URL, error) {
 
@@ -55,6 +60,7 @@ func (s *urlService) Create(
 	url := &model.URL{
 		ShortID:     shortID,
 		OriginalURL: originalURL,
+		UserID:      userID,
 	}
 
 	if err := s.repo.Create(ctx, url); err != nil {

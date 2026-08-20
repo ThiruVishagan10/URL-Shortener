@@ -70,8 +70,16 @@ func main() {
 	)
 
 	//Application routes
-	mux.HandleFunc("GET /health", handler.Health)                      //Health Check
-	mux.HandleFunc("POST /api/urls", urlHandler.Create)                //Create short ID
+	mux.HandleFunc("GET /health", handler.Health) //Health Check
+
+	//Create short ID
+	mux.Handle(
+		"POST /api/urls",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.Create),
+		),
+	)
+
 	mux.HandleFunc("GET /api/urls/{shortID}", urlHandler.GetByShortID) //Fetch particular ID
 	mux.HandleFunc("GET /{shortID}", urlHandler.Redirect)
 
