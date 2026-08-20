@@ -3,9 +3,10 @@ package middleware
 import (
 	"context"
 	"errors"
-	"net/http"
 	"log"
+	"net/http"
 
+	apperrors "github.com/thiruvishagan10/URL-Shortener/internal/apperrors"
 	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
 
@@ -35,8 +36,19 @@ func (m *AuthMiddleware) RequireAuth(
 		cookie, err := r.Cookie("session_id")
 		if err != nil {
 			if errors.Is(err, http.ErrNoCookie) {
-				http.Error(w, "Authentication required", http.StatusUnauthorized)
+				http.Error(
+					w,
+					"Authentication required",
+					http.StatusUnauthorized,
+				)
+				return
 			}
+
+			http.Error(
+				w,
+				"Failed to read session",
+				http.StatusInternalServerError,
+			)
 			return
 		}
 
@@ -45,9 +57,22 @@ func (m *AuthMiddleware) RequireAuth(
 			cookie.Value,
 		)
 		if err != nil {
-			log.Printf("Reason for failure: %v", err)
+			if errors.Is(err, apperrors.ErrSessionNotFound) {
+				http.Error(
+					w,
+					"Authentication required",
+					http.StatusUnauthorized,
+				)
+				return
+			}
 
-			http.Error(w, "Failed to Validate session", http.StatusInternalServerError)
+			log.Printf("session validation error: %v", err)
+
+			http.Error(
+				w,
+				"Failed to validate session",
+				http.StatusInternalServerError,
+			)
 			return
 		}
 
