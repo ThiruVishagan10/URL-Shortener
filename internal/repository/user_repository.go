@@ -45,7 +45,7 @@ func (r *PostgresUserRepository) Create(
 		VALUES ($1, $2, $3, $4)
 		RETURNING
 			id,
-			creaeted_at,
+			created_at,
 			updated_at
 	`
 

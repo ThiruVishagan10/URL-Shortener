@@ -32,20 +32,20 @@ func Load() (*Config, error) {
 	if googleClientID == "" {
 		return nil, errors.New("GOOGLE_CLIENT_ID is required")
 	}
-	
+
 	if googleClientSecret == "" {
 		return nil, errors.New("GOOGLE_CLIENT_SECRET is required")
 	}
-	
+
 	if googleRedirectURL == "" {
 		return nil, errors.New("GOOGLE_REDIRECT_URL is required")
 	}
 
 	return &Config{
-		DatabaseURL: dbURL,
-		Port:        port,
-		GoogleClientID: googleClientID,
+		DatabaseURL:        dbURL,
+		Port:               port,
+		GoogleClientID:     googleClientID,
 		GoogleClientSecret: googleClientSecret,
-		GoogleRedirectURL: googleRedirectURL,
+		GoogleRedirectURL:  googleRedirectURL,
 	}, nil
 }

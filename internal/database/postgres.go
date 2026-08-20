@@ -3,14 +3,14 @@ package database
 import (
 	"context"
 	"fmt"
-	"time"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
 
 func NewPostgresPool(connString string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New((context.Background()), connString)
 	if err != nil {
-		return  nil, fmt.Errorf("failed to create connection pool: %w", err)
+		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

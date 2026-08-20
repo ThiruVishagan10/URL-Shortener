@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/thiruvishagan10/URL-Shortener/internal/auth"
+	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
 
 const (
@@ -15,14 +16,20 @@ const (
 )
 
 type AuthHandler struct {
-	googleAuth *auth.GoogleOAuthProvider
+	googleAuth     *auth.GoogleOAuthProvider
+	userService    service.UserService
+	sessionService service.SessionService
 }
 
 func NewAuthHandler(
 	googleAuth *auth.GoogleOAuthProvider,
+	userService service.UserService,
+	sessionService service.SessionService,
 ) *AuthHandler {
 	return &AuthHandler{
-		googleAuth: googleAuth,
+		googleAuth:     googleAuth,
+		userService:    userService,
+		sessionService: sessionService,
 	}
 }
 
@@ -78,29 +85,49 @@ func (h *AuthHandler) GoogleCallback(
 	state := query.Get("state")
 
 	if code == "" {
-		http.Error(w, "Authorization code missing", http.StatusBadRequest)
+		http.Error(
+			w,
+			"Authorization code missing",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	if state == "" {
-		http.Error(w, "OAuth state missing", http.StatusBadRequest)
+		http.Error(
+			w,
+			"OAuth state missing",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	stateCookie, err := r.Cookie(oauthStateCookie)
 	if err != nil {
-		http.Error(w, "OAuth Cookie missing", http.StatusBadRequest)
+		http.Error(
+			w,
+			"OAuth state cookie missing",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	if state != stateCookie.Value {
-		http.Error(w, "Invalid OAuth state", http.StatusBadRequest)
+		http.Error(
+			w,
+			"Invalid OAuth state",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	verifierCookie, err := r.Cookie(oauthVerifierCookie)
 	if err != nil {
-		http.Error(w, "OAuth verifier missing", http.StatusBadRequest)
+		http.Error(
+			w,
+			"OAuth verifier missing",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -110,25 +137,81 @@ func (h *AuthHandler) GoogleCallback(
 		verifierCookie.Value,
 	)
 	if err != nil {
-		http.Error(w, "Google authentication failed", http.StatusUnauthorized)
+		http.Error(
+			w,
+			"Google authentication failed",
+			http.StatusUnauthorized,
+		)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	user, err := h.userService.FindOrCreate(
+		r.Context(),
+		identity.Subject,
+		identity.Email,
+		identity.Name,
+		identity.AvatarURL,
+	)
 
-	response := struct {
-		Subject   string  `json:"subject"`
-		Email     string  `json:"email"`
-		Name      string  `json:"name"`
-		AvatarURL *string `json:"avatar_url,omitempty"`
-	}{
-		Subject:   identity.Subject,
-		Email:     identity.Email,
-		Name:      identity.Name,
-		AvatarURL: identity.AvatarURL,
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to create or retrieve user",
+			http.StatusInternalServerError,
+		)
+		return
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	session, err := h.sessionService.Create(
+		r.Context(),
+		user.ID,
+	)
+
+	if err != nil {
+		log.Printf("session creation error: %v", err)
+
+		http.Error(
+			w,
+			"Failed to create session",
+			http.StatusInternalServerError,
+		)
+		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    session.ID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  session.ExpiresAt,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     oauthStateCookie,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     oauthVerifierCookie,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	http.Redirect(
+		w,
+		r,
+		"/",
+		http.StatusFound,
+	)
 }
