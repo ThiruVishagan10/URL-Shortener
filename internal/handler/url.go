@@ -3,11 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	apperrors "github.com/thiruvishagan10/URL-Shortener/internal/apperrors"
+	"github.com/thiruvishagan10/URL-Shortener/internal/middleware"
 	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
 
@@ -70,13 +72,26 @@ func (h *URLHandler) Create(
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
+	userID, ok := middleware.UserIDFromContext(r.Context())
+
+	if !ok {
+		http.Error(
+			w,
+			"Authentication required",
+			http.StatusUnauthorized,
+		)
+		return
+	}
 
 	url, err := h.service.Create(
 		r.Context(),
+		userID,
 		request.URL,
 	)
 
 	if err != nil {
+		log.Printf("URL Creation error: %v", err)
+
 		http.Error(w, "Failed to create short URL", http.StatusInternalServerError)
 		return
 	}

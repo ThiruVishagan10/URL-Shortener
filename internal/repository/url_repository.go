@@ -44,16 +44,24 @@ func (r *PostgresURLRepository) Create(
 	query := `
 		INSERT INTO urls (
 			short_id,
-			original_url
+			original_url,
+			user_id
 		)
-		VALUES ($1, $2)
+		VALUES ($1, $2, $3)
+		RETURNING 
+			id,
+			created_at
 	`
 
-	_, err := r.db.Exec(
+	err := r.db.QueryRow(
 		ctx,
 		query,
 		url.ShortID,
 		url.OriginalURL,
+		url.UserID,
+	).Scan(
+		&url.ID,
+		&url.CreatedAt,
 	)
 
 	if err != nil {
@@ -81,6 +89,7 @@ func (r *PostgresURLRepository) FindByShortID(
 			id,
 			short_id,
 			original_url,
+			user_id,
 			created_at
 		FROM urls
 		where short_id = $1
@@ -96,6 +105,7 @@ func (r *PostgresURLRepository) FindByShortID(
 		&url.ID,
 		&url.ShortID,
 		&url.OriginalURL,
+		&url.UserID,
 		&url.CreatedAt,
 	)
 
@@ -118,6 +128,7 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 			id,
 			short_id,
 			original_url,
+			user_id,
 			created_at
 		FROM urls
 		WHERE original_url = $1
@@ -133,6 +144,7 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 		&url.ID,
 		&url.ShortID,
 		&url.OriginalURL,
+		&url.UserID,
 		&url.CreatedAt,
 	)
 
