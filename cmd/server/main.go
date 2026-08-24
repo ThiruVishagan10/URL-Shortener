@@ -40,12 +40,17 @@ func main() {
 	googleAuth := auth.NewGoogleOAuthProvider(cfg)
 	userRepo := repository.NewUserRepository(dbPool)
 	userSvc := service.NewUserService(userRepo)
+	frontSvc := cfg.FRONTEND_URL
 
 	sessionRepo := repository.NewSessionRepository(dbPool)
 	sessionSvc := service.NewSessionService(sessionRepo)
-	authHandler := handler.NewAuthHandler(googleAuth, userSvc, sessionSvc)
+	authHandler := handler.NewAuthHandler(googleAuth, userSvc, sessionSvc, frontSvc)
 
 	authMiddleware := middleware.NewAuthMiddleware(sessionSvc)
+
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, frontSvc, http.StatusFound)
+	})
 
 	mux.Handle(
 		"GET /api/me",

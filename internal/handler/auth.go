@@ -19,17 +19,20 @@ type AuthHandler struct {
 	googleAuth     *auth.GoogleOAuthProvider
 	userService    service.UserService
 	sessionService service.SessionService
+	frontendURL    string
 }
 
 func NewAuthHandler(
 	googleAuth *auth.GoogleOAuthProvider,
 	userService service.UserService,
 	sessionService service.SessionService,
+	frontendURL string,
 ) *AuthHandler {
 	return &AuthHandler{
 		googleAuth:     googleAuth,
 		userService:    userService,
 		sessionService: sessionService,
+		frontendURL:    frontendURL,
 	}
 }
 
@@ -37,8 +40,12 @@ func (h *AuthHandler) GoogleLogin(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	log.Println("GoogleLogin handler reached")
+
 	authRequest, err := h.googleAuth.Begin()
 	if err != nil {
+		log.Printf("Google OAuth initialization failed: %v", err)
+
 		http.Error(
 			w,
 			"Failed to initialize Google authentication",
@@ -66,6 +73,8 @@ func (h *AuthHandler) GoogleLogin(
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   oauthCookieMaxAge,
 	})
+
+	log.Println("Redirecting to Google OAuth")
 
 	http.Redirect(
 		w,

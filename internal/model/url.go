@@ -7,5 +7,6 @@ type URL struct {
 	ShortID     string
 	OriginalURL string
 	UserID      string
+	Visibility  string
 	CreatedAt   time.Time
 }
