@@ -24,7 +24,8 @@ func NewURLHandler(service service.URLService) *URLHandler {
 }
 
 type CreateURLRequest struct {
-	URL string `json:"url"`
+	URL        string `json:"url"`
+	Visibility string `json:"visibility"`
 }
 
 type CreateURLResponse struct {
@@ -36,6 +37,7 @@ type GetURLResponse struct {
 	ID          string `json:"id"`
 	ShortID     string `json:"short_id"`
 	OriginalURL string `json:"original_url"`
+	Visibility  string `json:"visibility"`
 	CreatedAt   string `json:"created_at"`
 }
 
@@ -87,6 +89,7 @@ func (h *URLHandler) Create(
 		r.Context(),
 		userID,
 		request.URL,
+		request.Visibility,
 	)
 
 	if err != nil {
@@ -132,6 +135,7 @@ func (h *URLHandler) GetByShortID(
 		ID:          url.ID,
 		ShortID:     url.ShortID,
 		OriginalURL: url.OriginalURL,
+		Visibility:  url.Visibility,
 		CreatedAt:   url.CreatedAt.Format(time.RFC3339),
 	}
 

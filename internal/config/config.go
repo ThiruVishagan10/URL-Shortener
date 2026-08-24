@@ -8,6 +8,7 @@ import (
 type Config struct {
 	DatabaseURL        string
 	Port               string
+	FRONTEND_URL       string
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
@@ -16,6 +17,7 @@ type Config struct {
 func Load() (*Config, error) {
 	dbURL := os.Getenv("DATABASE_URL")
 	port := os.Getenv("PORT")
+	frontend_url := os.Getenv("FRONTEND_URL")
 
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
@@ -27,6 +29,10 @@ func Load() (*Config, error) {
 
 	if port == "" {
 		return nil, errors.New("PORT is required")
+	}
+
+	if frontend_url == "" {
+		return nil, errors.New("FRONTEND_URL is required")
 	}
 
 	if googleClientID == "" {
@@ -44,6 +50,7 @@ func Load() (*Config, error) {
 	return &Config{
 		DatabaseURL:        dbURL,
 		Port:               port,
+		FRONTEND_URL:       frontend_url,
 		GoogleClientID:     googleClientID,
 		GoogleClientSecret: googleClientSecret,
 		GoogleRedirectURL:  googleRedirectURL,
