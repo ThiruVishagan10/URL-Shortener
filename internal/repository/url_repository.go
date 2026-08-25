@@ -22,6 +22,7 @@ type URLRepository interface {
 
 	FindByOriginalURL(
 		ctx context.Context,
+		userID string,
 		originalURL string,
 	) (*model.URL, error)
 }
@@ -124,6 +125,7 @@ func (r *PostgresURLRepository) FindByShortID(
 
 func (r *PostgresURLRepository) FindByOriginalURL(
 	ctx context.Context,
+	userID string,
 	originalURL string,
 ) (*model.URL, error) {
 
@@ -136,7 +138,8 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 			visibility,
 			created_at
 		FROM urls
-		WHERE original_url = $1
+		WHERE user_id = $1 
+			AND original_url = $2
 	`
 
 	url := &model.URL{}
@@ -144,6 +147,7 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 	err := r.db.QueryRow(
 		ctx,
 		query,
+		userID,
 		originalURL,
 	).Scan(
 		&url.ID,

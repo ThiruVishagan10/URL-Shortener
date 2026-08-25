@@ -102,7 +102,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: mux,
+		Handler: middleware.CORS(cfg.FRONTEND_URL)(mux),
 	}
 
 	log.Printf("Server running on http://localhost:%s", cfg.Port)

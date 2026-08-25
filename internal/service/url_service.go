@@ -43,6 +43,7 @@ func (s *urlService) Create(
 
 	existingURL, err := s.repo.FindByOriginalURL(
 		ctx,
+		userID,
 		originalURL,
 	)
 
@@ -71,6 +72,7 @@ func (s *urlService) Create(
 		if errors.Is(err, apperrors.ErrDuplicateURL) {
 			existingURL, findErr := s.repo.FindByOriginalURL(
 				ctx,
+				userID,
 				originalURL,
 			)
 
