@@ -94,3 +94,48 @@ func UserIDFromContext(ctx context.Context) (string, bool) {
 
 	return userID, ok
 }
+
+func (m *AuthMiddleware) OptionalAuth(
+	next http.Handler,
+) http.Handler {
+	return http.HandlerFunc(func(
+		w http.ResponseWriter,
+		r *http.Request,
+	) {
+		cookie, err := r.Cookie(("session_id"))
+
+		if err != nil {
+			if errors.Is(err, http.ErrNoCookie) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			log.Printf("session cookie error: %v", err)
+			next.ServeHTTP(w, r)
+		}
+
+		session, err := m.sessionService.Find(
+			r.Context(),
+			cookie.Value,
+		)
+
+		if err != nil {
+			if errors.Is(err, apperrors.ErrSessionNotFound) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			log.Printf("optional session validation error: %v", err)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ctx := context.WithValue(
+			r.Context(),
+			userIDContextKey,
+			session.UserID,
+		)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}

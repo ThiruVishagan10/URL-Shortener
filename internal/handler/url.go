@@ -10,6 +10,7 @@ import (
 
 	apperrors "github.com/thiruvishagan10/URL-Shortener/internal/apperrors"
 	"github.com/thiruvishagan10/URL-Shortener/internal/middleware"
+	"github.com/thiruvishagan10/URL-Shortener/internal/model"
 	"github.com/thiruvishagan10/URL-Shortener/internal/service"
 )
 
@@ -74,6 +75,19 @@ func (h *URLHandler) Create(
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
+
+	visibility := model.URLVisibilityPrivate
+
+	if request.Visibility == "" {
+		visibility = request.Visibility
+	}
+
+	if visibility != model.URLVisibilityPrivate &&
+		visibility != model.URLVisibilityPublic {
+		http.Error(w, "Invalid visibility", http.StatusBadRequest)
+		return
+	}
+
 	userID, ok := middleware.UserIDFromContext(r.Context())
 
 	if !ok {
@@ -120,7 +134,9 @@ func (h *URLHandler) GetByShortID(
 ) {
 	shortID := r.PathValue("shortID")
 
-	url, err := h.service.GetByShortID(r.Context(), shortID)
+	userID, _ := middleware.UserIDFromContext(r.Context())
+
+	url, err := h.service.GetByShortID(r.Context(), shortID, userID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrURLNotFound) {
 			http.Error(w, "URL not found", http.StatusNotFound)
@@ -153,9 +169,12 @@ func (h *URLHandler) Redirect(
 ) {
 	shortID := r.PathValue("shortID")
 
+	userID, _ := middleware.UserIDFromContext(r.Context())
+
 	url, err := h.service.GetByShortID(
 		r.Context(),
 		shortID,
+		userID,
 	)
 
 	if err != nil {
