@@ -15,12 +15,13 @@ type URLService interface {
 		ctx context.Context,
 		userID string,
 		originalURL string,
-		URLVisibilityPrivate string,
+		visibility string,
 	) (*model.URL, error)
 
 	GetByShortID(
 		ctx context.Context,
 		shortID string,
+		requesterID string,
 	) (*model.URL, error)
 }
 
@@ -38,7 +39,7 @@ func (s *urlService) Create(
 	ctx context.Context,
 	userID string,
 	originalURL string,
-	URLVisibilityPrivate string,
+	visibility string,
 ) (*model.URL, error) {
 
 	existingURL, err := s.repo.FindByOriginalURL(
@@ -64,7 +65,7 @@ func (s *urlService) Create(
 		ShortID:     shortID,
 		OriginalURL: originalURL,
 		UserID:      userID,
-		Visibility:  model.URLVisibilityPrivate,
+		Visibility:  visibility,
 	}
 
 	if err := s.repo.Create(ctx, url); err != nil {
@@ -91,6 +92,21 @@ func (s *urlService) Create(
 func (s *urlService) GetByShortID(
 	ctx context.Context,
 	shortID string,
+	requesterID string,
 ) (*model.URL, error) {
-	return s.repo.FindByShortID(ctx, shortID)
+	url, err := s.repo.FindByShortID(ctx, shortID)
+	if err != nil {
+		return nil, err
+	}
+
+	if url.Visibility == model.URLVisibilityPublic {
+		return url, nil
+	}
+
+	if url.Visibility == model.URLVisibilityPrivate &&
+		url.UserID == requesterID {
+		return url, err
+	}
+
+	return nil, apperrors.ErrURLNotFound
 }

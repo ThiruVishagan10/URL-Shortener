@@ -85,8 +85,20 @@ func main() {
 		),
 	)
 
-	mux.HandleFunc("GET /api/urls/{shortID}", urlHandler.GetByShortID) //Fetch particular ID
-	mux.HandleFunc("GET /{shortID}", urlHandler.Redirect)
+	mux.Handle(
+		"GET /api/urls/{shortID}",
+		authMiddleware.OptionalAuth(
+			http.HandlerFunc(urlHandler.GetByShortID),
+		),
+	)
+
+	mux.Handle(
+
+		"GET /{shortID}",
+		authMiddleware.OptionalAuth(
+			http.HandlerFunc(urlHandler.Redirect),
+		),
+	)
 
 	//Google Auth
 	mux.HandleFunc(
