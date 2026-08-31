@@ -92,6 +92,14 @@ func main() {
 		),
 	)
 
+	//User URLs List
+	mux.Handle(
+		"GET /api/urls",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.GetByUserID),
+		),
+	)
+
 	mux.Handle(
 
 		"GET /{shortID}",

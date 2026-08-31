@@ -23,6 +23,11 @@ type URLService interface {
 		shortID string,
 		requesterID string,
 	) (*model.URL, error)
+
+	GetByUserID(
+		ctx context.Context,
+		userID string,
+	) ([]*model.URL, error)
 }
 
 type urlService struct {
@@ -109,4 +114,17 @@ func (s *urlService) GetByShortID(
 	}
 
 	return nil, apperrors.ErrURLNotFound
+}
+
+func (s *urlService) GetByUserID(
+	ctx context.Context,
+	userID string,
+) ([]*model.URL, error) {
+	urls, err := s.repo.FindByUserID(ctx, userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return urls, nil
 }

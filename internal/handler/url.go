@@ -42,6 +42,10 @@ type GetURLResponse struct {
 	CreatedAt   string `json:"created_at"`
 }
 
+type GetURLsResponse struct {
+	URLs []GetURLResponse `json:"urls"`
+}
+
 func validateURL(rawURL string) error {
 	parsedURL, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -197,4 +201,48 @@ func (h *URLHandler) Redirect(
 		url.OriginalURL,
 		http.StatusFound,
 	)
+}
+
+func (h *URLHandler) GetByUserID(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+
+	if !ok {
+		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.service.GetByUserID(r.Context(), userID)
+
+	if err != nil {
+		log.Printf("Failed to fetch user URLs: %v", err)
+
+		http.Error(w, "Failed to fetch User URLs", http.StatusInternalServerError)
+		return
+	}
+
+	response := GetURLsResponse{
+		URLs: make([]GetURLResponse, 0, len(urls)),
+	}
+
+	for _, url := range urls {
+		response.URLs = append(
+			response.URLs,
+			GetURLResponse{
+				ID:          url.ID,
+				ShortID:     url.ShortID,
+				OriginalURL: url.OriginalURL,
+				Visibility:  url.Visibility,
+				CreatedAt:   url.CreatedAt.Format(time.RFC3339),
+			},
+		)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode user URLs: %v", err)
+	}
 }

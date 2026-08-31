@@ -25,6 +25,18 @@ type URLRepository interface {
 		userID string,
 		originalURL string,
 	) (*model.URL, error)
+
+	FindByUserID(
+		ctx context.Context,
+		userID string,
+	) ([]*model.URL, error)
+
+	UpdateVisibility(
+		ctx context.Context,
+		shortID string,
+		userID string,
+		visibility string,
+	) error
 }
 
 type PostgresURLRepository struct {
@@ -165,4 +177,86 @@ func (r *PostgresURLRepository) FindByOriginalURL(
 		return nil, err
 	}
 	return url, nil
+}
+
+func (r *PostgresURLRepository) FindByUserID(
+	ctx context.Context,
+	userID string,
+) ([]*model.URL, error) {
+
+	query := `
+		SELECT
+			id,
+			short_id,
+			original_url,
+			user_id,
+			visibility,
+			created_at
+		FROM urls
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var urls []*model.URL
+
+	for rows.Next() {
+		url := &model.URL{}
+
+		if err := rows.Scan(
+			&url.ID,
+			&url.ShortID,
+			&url.OriginalURL,
+			&url.UserID,
+			&url.Visibility,
+			&url.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		urls = append(urls, url)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return urls, nil
+}
+
+func (r *PostgresURLRepository) UpdateVisibility(
+	ctx context.Context,
+	shortID string,
+	userID string,
+	visibility string,
+) error {
+
+	query := `
+		UPDATE urls
+		SET visibility = $1
+		WHERE short_id = $2
+			AND user_id = $3
+	`
+
+	result, err := r.db.Exec(
+		ctx,
+		query,
+		visibility,
+		shortID,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return apperrs.ErrURLNotFound
+	}
+
+	return nil
 }
