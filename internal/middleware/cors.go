@@ -17,7 +17,7 @@ func CORS(frontendURL string) func(http.Handler) http.Handler {
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 				w.Header().Set(
 					"Access-Control-Allow-Methods",
-					"GET, POST, OPTIONS",
+					"GET, POST, PATCH, OPTIONS",
 				)
 				w.Header().Set(
 					"Access-Control-Allow-Headers",

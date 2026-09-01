@@ -46,6 +46,10 @@ type GetURLsResponse struct {
 	URLs []GetURLResponse `json:"urls"`
 }
 
+type UpdateVisibility struct {
+	Visibility string `json:"visibility"`
+}
+
 func validateURL(rawURL string) error {
 	parsedURL, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -244,5 +248,71 @@ func (h *URLHandler) GetByUserID(
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode user URLs: %v", err)
+	}
+}
+
+// Updating the Url's visibility
+func (h *URLHandler) UpdateVisibility(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	shortID := r.PathValue("shortID")
+
+	var request UpdateVisibility
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(
+			w,
+			"Invalid request body",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if request.Visibility == "" {
+		http.Error(w, "visibility is required", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.service.UpdateVisibility(
+		r.Context(),
+		shortID,
+		userID,
+		request.Visibility,
+	); err != nil {
+
+		if errors.Is(err, apperrors.ErrInvalidVisibility) {
+			http.Error(w, "Invalid Visibility", http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, apperrors.ErrURLNotFound) {
+			http.Error(w, "URL not found", http.StatusNotFound)
+			return
+		}
+
+		log.Printf("Failed to update URL visibility: %v", err)
+
+		http.Error(w, "Failed to update URL visibility", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	response := map[string]string{
+		"short_id":   shortID,
+		"visibility": request.Visibility,
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to update visibility response: %v", err)
 	}
 }

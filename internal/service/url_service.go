@@ -28,6 +28,13 @@ type URLService interface {
 		ctx context.Context,
 		userID string,
 	) ([]*model.URL, error)
+
+	UpdateVisibility(
+		ctx context.Context,
+		shortID string,
+		userID string,
+		visibility string,
+	) error
 }
 
 type urlService struct {
@@ -127,4 +134,23 @@ func (s *urlService) GetByUserID(
 	}
 
 	return urls, nil
+}
+
+func (s *urlService) UpdateVisibility(
+	ctx context.Context,
+	shortID string,
+	userID string,
+	visibility string,
+) error {
+	if visibility != model.URLVisibilityPrivate &&
+		visibility != model.URLVisibilityPublic {
+		return apperrors.ErrInvalidVisibility
+	}
+
+	return s.repo.UpdateVisibility(
+		ctx,
+		shortID,
+		userID,
+		visibility,
+	)
 }

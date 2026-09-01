@@ -100,11 +100,20 @@ func main() {
 		),
 	)
 
+	//Actual redirection of the urls
 	mux.Handle(
 
 		"GET /{shortID}",
 		authMiddleware.OptionalAuth(
 			http.HandlerFunc(urlHandler.Redirect),
+		),
+	)
+
+	//Visibility updation
+	mux.Handle(
+		"PATCH /api/urls/{shortID}",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.UpdateVisibility),
 		),
 	)
 
