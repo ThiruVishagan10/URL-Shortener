@@ -35,6 +35,12 @@ type URLService interface {
 		userID string,
 		visibility string,
 	) error
+
+	Delete(
+		ctx context.Context,
+		shortID string,
+		userID string,
+	) error
 }
 
 type urlService struct {
@@ -152,5 +158,17 @@ func (s *urlService) UpdateVisibility(
 		shortID,
 		userID,
 		visibility,
+	)
+}
+
+func (s *urlService) Delete(
+	ctx context.Context,
+	shortID string,
+	userID string,
+) error {
+	return s.repo.Delete(
+		ctx,
+		shortID,
+		userID,
 	)
 }

@@ -316,3 +316,49 @@ func (h *URLHandler) UpdateVisibility(
 		log.Printf("Failed to update visibility response: %v", err)
 	}
 }
+
+// Delete handler
+func (h *URLHandler) Delete(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	shortID := r.PathValue("shortID")
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(
+			w,
+			"Authentication required",
+			http.StatusUnauthorized,
+		)
+		return
+	}
+
+	err := h.service.Delete(
+		r.Context(),
+		shortID,
+		userID,
+	)
+
+	if err != nil {
+		if errors.Is(err, apperrors.ErrURLNotFound) {
+			http.Error(
+				w,
+				"URL not found",
+				http.StatusNotFound,
+			)
+			return
+		}
+
+		log.Printf("Failed to delete URL: %v", err)
+
+		http.Error(
+			w,
+			"Failed to delete URL",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

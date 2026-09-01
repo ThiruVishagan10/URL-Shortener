@@ -117,6 +117,14 @@ func main() {
 		),
 	)
 
+	//Delete urls
+	mux.Handle(
+		"DELETE /api/urls/{shortID}",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.Delete),
+		),
+	)
+
 	//Google Auth
 	mux.HandleFunc(
 		"GET /auth/google",

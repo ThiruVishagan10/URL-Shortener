@@ -37,6 +37,12 @@ type URLRepository interface {
 		userID string,
 		visibility string,
 	) error
+
+	Delete(
+		ctx context.Context,
+		shortID string,
+		userID string,
+	) error
 }
 
 type PostgresURLRepository struct {
@@ -229,7 +235,7 @@ func (r *PostgresURLRepository) FindByUserID(
 	return urls, nil
 }
 
-//Updating URL 
+// Updating URL
 func (r *PostgresURLRepository) UpdateVisibility(
 	ctx context.Context,
 	shortID string,
@@ -248,6 +254,35 @@ func (r *PostgresURLRepository) UpdateVisibility(
 		ctx,
 		query,
 		visibility,
+		shortID,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return apperrs.ErrURLNotFound
+	}
+
+	return nil
+}
+
+func (r *PostgresURLRepository) Delete(
+	ctx context.Context,
+	shortID string,
+	userID string,
+) error {
+
+	query := `
+		DELETE FROM urls
+		WHERE short_id = $1 
+			AND user_id = $2
+	`
+
+	result, err := r.db.Exec(
+		ctx,
+		query,
 		shortID,
 		userID,
 	)
