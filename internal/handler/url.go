@@ -42,6 +42,14 @@ type GetURLResponse struct {
 	CreatedAt   string `json:"created_at"`
 }
 
+type GetURLsResponse struct {
+	URLs []GetURLResponse `json:"urls"`
+}
+
+type UpdateVisibility struct {
+	Visibility string `json:"visibility"`
+}
+
 func validateURL(rawURL string) error {
 	parsedURL, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -197,4 +205,160 @@ func (h *URLHandler) Redirect(
 		url.OriginalURL,
 		http.StatusFound,
 	)
+}
+
+func (h *URLHandler) GetByUserID(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+
+	if !ok {
+		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.service.GetByUserID(r.Context(), userID)
+
+	if err != nil {
+		log.Printf("Failed to fetch user URLs: %v", err)
+
+		http.Error(w, "Failed to fetch User URLs", http.StatusInternalServerError)
+		return
+	}
+
+	response := GetURLsResponse{
+		URLs: make([]GetURLResponse, 0, len(urls)),
+	}
+
+	for _, url := range urls {
+		response.URLs = append(
+			response.URLs,
+			GetURLResponse{
+				ID:          url.ID,
+				ShortID:     url.ShortID,
+				OriginalURL: url.OriginalURL,
+				Visibility:  url.Visibility,
+				CreatedAt:   url.CreatedAt.Format(time.RFC3339),
+			},
+		)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode user URLs: %v", err)
+	}
+}
+
+// Updating the Url's visibility
+func (h *URLHandler) UpdateVisibility(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	shortID := r.PathValue("shortID")
+
+	var request UpdateVisibility
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(
+			w,
+			"Invalid request body",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if request.Visibility == "" {
+		http.Error(w, "visibility is required", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.service.UpdateVisibility(
+		r.Context(),
+		shortID,
+		userID,
+		request.Visibility,
+	); err != nil {
+
+		if errors.Is(err, apperrors.ErrInvalidVisibility) {
+			http.Error(w, "Invalid Visibility", http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, apperrors.ErrURLNotFound) {
+			http.Error(w, "URL not found", http.StatusNotFound)
+			return
+		}
+
+		log.Printf("Failed to update URL visibility: %v", err)
+
+		http.Error(w, "Failed to update URL visibility", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	response := map[string]string{
+		"short_id":   shortID,
+		"visibility": request.Visibility,
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to update visibility response: %v", err)
+	}
+}
+
+// Delete handler
+func (h *URLHandler) Delete(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	shortID := r.PathValue("shortID")
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(
+			w,
+			"Authentication required",
+			http.StatusUnauthorized,
+		)
+		return
+	}
+
+	err := h.service.Delete(
+		r.Context(),
+		shortID,
+		userID,
+	)
+
+	if err != nil {
+		if errors.Is(err, apperrors.ErrURLNotFound) {
+			http.Error(
+				w,
+				"URL not found",
+				http.StatusNotFound,
+			)
+			return
+		}
+
+		log.Printf("Failed to delete URL: %v", err)
+
+		http.Error(
+			w,
+			"Failed to delete URL",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

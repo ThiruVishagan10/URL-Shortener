@@ -23,6 +23,24 @@ type URLService interface {
 		shortID string,
 		requesterID string,
 	) (*model.URL, error)
+
+	GetByUserID(
+		ctx context.Context,
+		userID string,
+	) ([]*model.URL, error)
+
+	UpdateVisibility(
+		ctx context.Context,
+		shortID string,
+		userID string,
+		visibility string,
+	) error
+
+	Delete(
+		ctx context.Context,
+		shortID string,
+		userID string,
+	) error
 }
 
 type urlService struct {
@@ -109,4 +127,48 @@ func (s *urlService) GetByShortID(
 	}
 
 	return nil, apperrors.ErrURLNotFound
+}
+
+func (s *urlService) GetByUserID(
+	ctx context.Context,
+	userID string,
+) ([]*model.URL, error) {
+	urls, err := s.repo.FindByUserID(ctx, userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return urls, nil
+}
+
+func (s *urlService) UpdateVisibility(
+	ctx context.Context,
+	shortID string,
+	userID string,
+	visibility string,
+) error {
+	if visibility != model.URLVisibilityPrivate &&
+		visibility != model.URLVisibilityPublic {
+		return apperrors.ErrInvalidVisibility
+	}
+
+	return s.repo.UpdateVisibility(
+		ctx,
+		shortID,
+		userID,
+		visibility,
+	)
+}
+
+func (s *urlService) Delete(
+	ctx context.Context,
+	shortID string,
+	userID string,
+) error {
+	return s.repo.Delete(
+		ctx,
+		shortID,
+		userID,
+	)
 }

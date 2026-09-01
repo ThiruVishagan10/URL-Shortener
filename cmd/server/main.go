@@ -92,11 +92,36 @@ func main() {
 		),
 	)
 
+	//User URLs List
+	mux.Handle(
+		"GET /api/urls",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.GetByUserID),
+		),
+	)
+
+	//Actual redirection of the urls
 	mux.Handle(
 
 		"GET /{shortID}",
 		authMiddleware.OptionalAuth(
 			http.HandlerFunc(urlHandler.Redirect),
+		),
+	)
+
+	//Visibility updation
+	mux.Handle(
+		"PATCH /api/urls/{shortID}",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.UpdateVisibility),
+		),
+	)
+
+	//Delete urls
+	mux.Handle(
+		"DELETE /api/urls/{shortID}",
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(urlHandler.Delete),
 		),
 	)
 
