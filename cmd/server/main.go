@@ -137,6 +137,12 @@ func main() {
 		authHandler.GoogleCallback,
 	)
 
+	//Logout
+	mux.HandleFunc(
+		"POST /api/auth/logout",
+		authHandler.Logout,
+	)
+
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: middleware.CORS(cfg.FRONTEND_URL)(mux),

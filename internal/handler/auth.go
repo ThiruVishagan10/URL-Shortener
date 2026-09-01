@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -225,4 +226,50 @@ func (h *AuthHandler) GoogleCallback(
 		"/",
 		http.StatusFound,
 	)
+}
+
+func (h *AuthHandler) Logout(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		http.Error(
+			w,
+			"Failed to read session",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	if err := h.sessionService.Delete(
+		r.Context(),
+		cookie.Value,
+	); err != nil {
+		log.Printf("session deletion error: %v", err)
+
+		http.Error(
+			w,
+			"Failed to sign out",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	w.WriteHeader(http.StatusNoContent)
 }
