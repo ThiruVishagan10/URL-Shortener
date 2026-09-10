@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 
 	"github.com/thiruvishagan10/URL-Shortener/internal/auth"
 	"github.com/thiruvishagan10/URL-Shortener/internal/config"
@@ -31,27 +32,47 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	// Rate limiter configuration:
+	// 10 requests per second with a burst capacity of 20.
+	rateLimiter := middleware.NewIPRateLimiter(
+		rate.Limit(10),
+		20,
+	)
+
+	// URL dependencies
 	repo := repository.NewURLRepository(dbPool)
 	svc := service.NewURLService(repo)
 	urlHandler := handler.NewURLHandler(svc)
 
 	mux := http.NewServeMux()
 
+	// Google authentication dependencies
 	googleAuth := auth.NewGoogleOAuthProvider(cfg)
+
 	userRepo := repository.NewUserRepository(dbPool)
 	userSvc := service.NewUserService(userRepo)
+
 	frontSvc := cfg.FRONTEND_URL
 
+	// Session dependencies
 	sessionRepo := repository.NewSessionRepository(dbPool)
 	sessionSvc := service.NewSessionService(sessionRepo)
-	authHandler := handler.NewAuthHandler(googleAuth, userSvc, sessionSvc, frontSvc)
+
+	authHandler := handler.NewAuthHandler(
+		googleAuth,
+		userSvc,
+		sessionSvc,
+		frontSvc,
+	)
 
 	authMiddleware := middleware.NewAuthMiddleware(sessionSvc)
 
+	// Root
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, frontSvc, http.StatusFound)
 	})
 
+	// Current authenticated user
 	mux.Handle(
 		"GET /api/me",
 		authMiddleware.RequireAuth(
@@ -64,27 +85,42 @@ func main() {
 				)
 
 				if !ok {
-					http.Error(w, "User ID is missing from context", http.StatusInternalServerError)
+					http.Error(
+						w,
+						"User ID is missing from context",
+						http.StatusInternalServerError,
+					)
 					return
 				}
 
 				w.Header().Set("Content-Type", "text/plain")
-				w.Write([]byte("Authenticated user: " + userID))
+
+				_, _ = w.Write(
+					[]byte("Authenticated user: " + userID),
+				)
 			}),
 		),
 	)
 
-	//Application routes
-	mux.HandleFunc("GET /health", handler.Health) //Health Check
+	// Application routes
 
-	//Create short ID
+	// Health check
+	mux.HandleFunc(
+		"GET /health",
+		handler.Health,
+	)
+
+	// Create short URL
 	mux.Handle(
 		"POST /api/urls",
-		authMiddleware.RequireAuth(
-			http.HandlerFunc(urlHandler.Create),
+		rateLimiter.Middleware(
+			authMiddleware.RequireAuth(
+				http.HandlerFunc(urlHandler.Create),
+			),
 		),
 	)
 
+	// Get URL by short ID
 	mux.Handle(
 		"GET /api/urls/{shortID}",
 		authMiddleware.OptionalAuth(
@@ -92,7 +128,7 @@ func main() {
 		),
 	)
 
-	//User URLs List
+	// User URLs list
 	mux.Handle(
 		"GET /api/urls",
 		authMiddleware.RequireAuth(
@@ -100,16 +136,15 @@ func main() {
 		),
 	)
 
-	//Actual redirection of the urls
+	// Actual redirection of shortened URLs
 	mux.Handle(
-
 		"GET /{shortID}",
 		authMiddleware.OptionalAuth(
 			http.HandlerFunc(urlHandler.Redirect),
 		),
 	)
 
-	//Visibility updation
+	// Update URL visibility
 	mux.Handle(
 		"PATCH /api/urls/{shortID}",
 		authMiddleware.RequireAuth(
@@ -117,7 +152,7 @@ func main() {
 		),
 	)
 
-	//Delete urls
+	// Delete URL
 	mux.Handle(
 		"DELETE /api/urls/{shortID}",
 		authMiddleware.RequireAuth(
@@ -125,32 +160,38 @@ func main() {
 		),
 	)
 
-	//Google Auth
-	mux.HandleFunc(
+	// Google OAuth login
+	mux.Handle(
 		"GET /auth/google",
-		authHandler.GoogleLogin,
-	) //Redirect to original url through shortid
+		rateLimiter.Middleware(
+			http.HandlerFunc(authHandler.GoogleLogin),
+		),
+	)
 
-	//Redirect
+	// Google OAuth callback
 	mux.HandleFunc(
 		"GET /auth/google/callback",
 		authHandler.GoogleCallback,
 	)
 
-	//Logout
+	// Logout
 	mux.HandleFunc(
 		"POST /api/auth/logout",
 		authHandler.Logout,
 	)
 
 	server := &http.Server{
-		Addr:    ":" + cfg.Port,
+		Addr: ":" + cfg.Port,
 		Handler: middleware.CORS(cfg.FRONTEND_URL)(mux),
 	}
 
-	log.Printf("Server running on http://localhost:%s", cfg.Port)
+	log.Printf(
+		"Server running on http://localhost:%s",
+		cfg.Port,
+	)
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := server.ListenAndServe(); err != nil &&
+		err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
