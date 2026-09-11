@@ -2,7 +2,9 @@ package config
 
 import (
 	"errors"
+	"net/url"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -12,12 +14,14 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
+	AppBaseURL         string
 }
 
 func Load() (*Config, error) {
 	dbURL := os.Getenv("DATABASE_URL")
 	port := os.Getenv("PORT")
 	frontend_url := os.Getenv("FRONTEND_URL")
+	appBaseURL := strings.TrimRight(os.Getenv("APP_BASE_URL"), "/")
 
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
@@ -33,6 +37,13 @@ func Load() (*Config, error) {
 
 	if frontend_url == "" {
 		return nil, errors.New("FRONTEND_URL is required")
+	}
+
+	parsedAppBaseURL, err := url.ParseRequestURI(appBaseURL)
+	if appBaseURL == "" || err != nil ||
+		(parsedAppBaseURL.Scheme != "http" && parsedAppBaseURL.Scheme != "https") ||
+		parsedAppBaseURL.Host == "" {
+		return nil, errors.New("APP_BASE_URL must be an absolute http or https URL")
 	}
 
 	if googleClientID == "" {
@@ -54,5 +65,6 @@ func Load() (*Config, error) {
 		GoogleClientID:     googleClientID,
 		GoogleClientSecret: googleClientSecret,
 		GoogleRedirectURL:  googleRedirectURL,
+		AppBaseURL:         appBaseURL,
 	}, nil
 }

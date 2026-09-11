@@ -42,7 +42,7 @@ func main() {
 	// URL dependencies
 	repo := repository.NewURLRepository(dbPool)
 	svc := service.NewURLService(repo)
-	urlHandler := handler.NewURLHandler(svc)
+	urlHandler := handler.NewURLHandler(svc, cfg.AppBaseURL)
 
 	mux := http.NewServeMux()
 
@@ -181,14 +181,11 @@ func main() {
 	)
 
 	server := &http.Server{
-		Addr: ":" + cfg.Port,
+		Addr:    ":" + cfg.Port,
 		Handler: middleware.CORS(cfg.FRONTEND_URL)(mux),
 	}
 
-	log.Printf(
-		"Server running on http://localhost:%s",
-		cfg.Port,
-	)
+	log.Printf("Server listening on :%s (public base URL: %s)", cfg.Port, cfg.AppBaseURL)
 
 	if err := server.ListenAndServe(); err != nil &&
 		err != http.ErrServerClosed {

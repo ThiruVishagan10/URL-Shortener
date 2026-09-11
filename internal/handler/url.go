@@ -15,12 +15,14 @@ import (
 )
 
 type URLHandler struct {
-	service service.URLService
+	service    service.URLService
+	appBaseURL string
 }
 
-func NewURLHandler(service service.URLService) *URLHandler {
+func NewURLHandler(service service.URLService, appBaseURL string) *URLHandler {
 	return &URLHandler{
-		service: service,
+		service:    service,
+		appBaseURL: appBaseURL,
 	}
 }
 
@@ -123,7 +125,7 @@ func (h *URLHandler) Create(
 
 	response := CreateURLResponse{
 		ID:       url.ShortID,
-		ShortURL: "http://localhost:8080/" + url.ShortID, // TODO: Replace localhost with configurable base URL.
+		ShortURL: h.appBaseURL + "/" + url.ShortID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

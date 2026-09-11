@@ -60,11 +60,14 @@ FRONTEND_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URL=http://localhost:8080/auth/google/callback
+APP_BASE_URL=http://localhost:8080
 ```
 
-All six values are required. Do not commit `.env` or OAuth credentials.
+All seven values are required. Do not commit `.env` or OAuth credentials.
 
 `FRONTEND_URL` has two roles: the root route redirects there, and it is the single allowed CORS origin. Its value must exactly match the frontend browser origin, including scheme, host, and port.
+
+`APP_BASE_URL` is the public address used in created short URLs. Do not include a trailing slash. For the deployed API, set it to `https://url-shortener-4ykd.onrender.com` in Render's environment settings.
 
 In Google Cloud, add the exact value of `GOOGLE_REDIRECT_URL` to the OAuth client's authorized redirect URIs. Use either `localhost` or `127.0.0.1` consistently throughout the browser URL and configuration; they are different origins.
 
@@ -171,10 +174,10 @@ Valid visibility values are `public` and `private`. The current handler requires
 Successful response (`201 Created`):
 
 ```json
-{"id":"aB3dE9","short_url":"http://localhost:8080/aB3dE9"}
+{"id":"aB3dE9","short_url":"<APP_BASE_URL>/aB3dE9"}
 ```
 
-The `short_url` response is currently hard-coded to `http://localhost:8080`, regardless of `PORT` or deployment host. Treat it as a local-development response until a configurable public base URL is implemented.
+The `short_url` response uses `APP_BASE_URL`.
 
 ### `GET /api/urls`
 
