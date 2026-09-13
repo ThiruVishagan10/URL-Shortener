@@ -69,7 +69,30 @@ func main() {
 
 	// Root
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, frontSvc, http.StatusFound)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL Shortener API</title>
+</head>
+<body>
+  <main>
+    <h1>The frontend is still under development</h1>
+    <p>We are sorry, but the URL Shortener frontend is not available just yet.</p>
+    <p>In the meantime, feel free to test the application with the APIs below.</p>
+    <ul>
+      <li><a href="/health">GET /health</a> &mdash; service health check</li>
+      <li><a href="/auth/google">GET /auth/google</a> &mdash; sign in with Google</li>
+      <li><code>POST /api/urls</code> &mdash; create a short URL</li>
+      <li><code>GET /api/urls</code> &mdash; list your URLs</li>
+      <li><code>GET /api/urls/{shortID}</code> &mdash; look up a short URL</li>
+    </ul>
+    <p>See the repository README for the complete API reference and request examples.</p>
+  </main>
+</body>
+</html>`))
 	})
 
 	// Current authenticated user

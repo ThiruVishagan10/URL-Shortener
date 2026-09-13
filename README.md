@@ -128,7 +128,7 @@ Unless otherwise stated, errors are plain-text HTTP error responses. Protected e
 
 ### `GET /`
 
-Redirects (`302 Found`) to `FRONTEND_URL`.
+Returns a temporary HTML page explaining that the frontend is under development and linking to a few useful API routes. This page can be replaced by the frontend when it is ready.
 
 ### `GET /health`
 
